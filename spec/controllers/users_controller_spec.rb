@@ -52,10 +52,26 @@ describe UsersController do
                                            :content => "2")
         response.should have_selector("a", :href => "/users?page=2",
                                            :content => "Next")
-      end
-
-      
+      end                  
     end
+    
+    describe "delete links" do
+            
+      it "should appear for admin user" do
+        admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(admin)
+        get :index
+        response.should have_selector("a",  :content => "delete")    	      	
+      end
+      
+      it "should not appear for non-admin user" do
+        non_admin = Factory(:user, :email => "admin@example.com", :admin => false)
+        test_sign_in(non_admin)
+        get :index
+        response.should_not have_selector("a",  :content => "delete")    	      	
+      end
+      	 
+    end		
   end
     
   describe "GET 'show'" do
@@ -178,6 +194,8 @@ describe UsersController do
         flash[:success].should =~ /welcome to the sample app/i
       end 
     end
+        	
+    
   end
   
   describe "GET 'edit'" do
@@ -318,8 +336,8 @@ describe UsersController do
     describe "as an admin user" do
 
       before(:each) do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in(admin)
+        @admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(@admin)
       end
 
       it "should destroy the user" do
@@ -327,6 +345,16 @@ describe UsersController do
           delete :destroy, :id => @user
         end.should change(User, :count).by(-1)
       end
+      
+  
+     ## Exercise 10.6.5 Modify the destroy action to prevent admin
+     ## users from destroying themselves.    
+     it "should prevent admin users from destroying themselves" do
+        lambda do
+     	  delete :destroy, :id => @admin
+     	end.should_not change(User, :count) 
+     	response.should redirect_to(users_path)
+     end
 
       it "should redirect to the users page" do
         delete :destroy, :id => @user
@@ -334,5 +362,27 @@ describe UsersController do
       end
     end
   end
+  
+  describe "new/create pages for signed-in users" do
+     before(:each) do
+      @user = Factory(:user)
+      test_sign_in(@user)
+     end
+     
+     it "should deny access to 'new' " do
+      get :new
+      response.should redirect_to(root_path)
+      flash[:info].should =~ /You're already logged in/i    
+     end
+     
+     it "should deny access to 'create' " do
+     @attr = { :name => "New User", :email => "user@example.com",
+               :password => "foobar", :password_confirmation => "foobar" }	
+      post :create, :user => @attr
+      flash[:info].should =~ /You're already logged in/i
+      response.should redirect_to(root_path)    
+     end	  
+       	  
+  end	  	   
 
 end
