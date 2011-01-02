@@ -52,7 +52,7 @@ describe "LayoutLinks" do
 
     before(:each) do
       @user = Factory(:user)
-      integration_sign_in(user)
+      integration_sign_in(@user)
     end
 
     it "should have a signout link" do
