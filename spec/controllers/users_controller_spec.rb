@@ -53,27 +53,38 @@ describe UsersController do
         response.should have_selector("a", :href => "/users?page=2",
                                            :content => "Next")
       end                  
-    end
     
-    describe "delete links" do
-            
-      it "should appear for admin user" do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in(admin)
-        get :index
-        response.should have_selector("a",  :content => "delete")    	      	
-      end
+    
+      describe "delete links" do
       
-      it "should not appear for non-admin user" do
-        non_admin = Factory(:user, :email => "admin@example.com", :admin => false)
-        test_sign_in(non_admin)
-        get :index
-        response.should_not have_selector("a",  :content => "delete")    	      	
-      end
-      	 
-    end		
+        describe "as admin user" do	        
+          before(:each) do
+            @admin = Factory(:user, :name => "Admin User", :email => "admin@example.com", :admin => true)
+            test_sign_in(@admin)
+            get :index        
+          end  
+        
+          it "should appear for other users" do
+            user =@users.first    	
+            response.should have_selector("a",  :title =>"Delete #{user.name}", :content => "delete")                	      	
+          end
+        
+          #Exercise 10.6.5 should prevent admin for destroying themselves      
+          it "should not appear for admin user" do
+            response.should_not have_selector("a", :title => "Delete #{@admin.name}", :content => "delete")
+          end
+        end
+      
+        it "should not appear for non-admin user" do
+          non_admin = Factory(:user, :email => "admin@example.com", :admin => false)
+          test_sign_in(non_admin)
+          get :index
+            response.should_not have_selector("a",  :content => "delete")    	      	
+        end      	 
+      end		
+    end
   end
-    
+      
   describe "GET 'show'" do
 
     before(:each) do
@@ -104,6 +115,15 @@ describe UsersController do
       get :show, :id => @user
       response.should have_selector("h1>img", :class => "gravatar")
     end
+    
+    it "should show the user's microposts" do
+      mp1 = Factory(:micropost, :user => @user, :content => "Foo bar")
+      mp2 = Factory(:micropost, :user => @user, :content => "Baz quux")
+      get :show, :id => @user
+      response.should have_selector("span.content", :content => mp1.content)
+      response.should have_selector("span.content", :content => mp2.content)
+    end
+
 
   end
 
@@ -347,14 +367,16 @@ describe UsersController do
       end
       
   
-     ## Exercise 10.6.5 Modify the destroy action to prevent admin
-     ## users from destroying themselves.    
-     it "should prevent admin users from destroying themselves" do
+      ## Exercise 10.6.5 Modify the destroy action to prevent admin
+      ## users from destroying themselves.    
+      it "should prevent admin users from destroying themselves" do
         lambda do
      	  delete :destroy, :id => @admin
      	end.should_not change(User, :count) 
      	response.should redirect_to(users_path)
-     end
+      end
+      
+      
 
       it "should redirect to the users page" do
         delete :destroy, :id => @user
